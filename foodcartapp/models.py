@@ -1,6 +1,8 @@
 from django.db import models
 from django.core.validators import MinValueValidator
 
+from phonenumber_field.modelfields import PhoneNumberField
+#import datetime
 
 class Restaurant(models.Model):
     name = models.CharField(
@@ -79,7 +81,7 @@ class Product(models.Model):
     )
     description = models.TextField(
         'описание',
-        max_length=200,
+        max_length=400,
         blank=True,
     )
 
@@ -121,3 +123,72 @@ class RestaurantMenuItem(models.Model):
 
     def __str__(self):
         return f"{self.restaurant.name} - {self.product.name}"
+
+
+class Order(models.Model):
+    datetime = models.DateTimeField(
+        auto_now_add=True,
+        null=True,
+        db_index=True,
+        verbose_name='Время заказа'
+    )
+    firstname = models.CharField(
+        'имя',
+        blank=True,
+        null=False,
+        max_length=50,
+        db_index=True,
+    )
+    lastname = models.CharField(
+        'фамилия',
+        blank=True,
+        null=False, 
+        max_length=50,
+        db_index=True,
+    )
+    phonenumber = PhoneNumberField(
+        'телефон',
+        db_index=True,
+    )
+    address = models.CharField(
+        'адрес доставки',
+        max_length=100,
+        db_index=True,
+    )
+    
+    class Meta:
+        verbose_name = 'заказ'
+        verbose_name_plural = 'заказы'
+        
+    def __str__(self):
+        return f'{self.firstname} {self.lastname} - {self.address}'
+        
+        
+class OrderItem(models.Model):
+    order = models.ForeignKey(
+        Order,
+        related_name='items',
+        verbose_name='заказ',
+        on_delete=models.CASCADE,
+    )
+    product = models.ForeignKey(
+        Product,
+        related_name='items',
+        verbose_name='продукт',
+        on_delete=models.CASCADE,
+    )    
+    quantity = models.IntegerField(
+        verbose_name='количество',
+        default=1,
+        validators=[MinValueValidator(1)]
+    )
+    
+    class Meta:
+        verbose_name = 'элемент заказа'
+        verbose_name_plural = 'элементы заказа'
+        unique_together = [
+            ['order', 'product']
+        ]
+
+    def __str__(self):
+        return f"{self.order.address} - {self.product.name}"

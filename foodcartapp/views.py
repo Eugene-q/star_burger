@@ -1,9 +1,9 @@
+import json
 from django.http import JsonResponse
 from django.templatetags.static import static
 
-
+from .models import Order, OrderItem
 from .models import Product
-
 
 def banners_list_api(request):
     # FIXME move data to db?
@@ -58,5 +58,18 @@ def product_list_api(request):
 
 
 def register_order(request):
-    # TODO это лишь заглушка
+    order = json.loads(request.body.decode())
+    order_obj = Order.objects.create(
+        datetime=order.get('datetime'),
+        firstname=order.get('firstname'),
+        lastname=order.get('lastname'),
+        phonenumber=order.get('phonenumber'),
+        address=order.get('address')
+    )
+    for product in order.get('products'):
+        OrderItem.objects.create(
+            order=order_obj,
+            product=Product.objects.get(id=product.get('product')),
+            quantity=product.get('quantity'),
+        )
     return JsonResponse({})
