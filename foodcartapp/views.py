@@ -1,6 +1,7 @@
 import json
 from django.http import JsonResponse
 from django.templatetags.static import static
+from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
@@ -61,18 +62,23 @@ def product_list_api(request):
 @api_view(['POST'])
 def register_order(request):
     order = request.data
-    print(order)
-    order_obj = Order.objects.create(
-        datetime=order.get('datetime'),
-        firstname=order.get('firstname'),
-        lastname=order.get('lastname'),
-        phonenumber=order.get('phonenumber'),
-        address=order.get('address')
-    )
-    for product in order.get('products'):
-        OrderItem.objects.create(
-            order=order_obj,
-            product=Product.objects.get(id=product.get('product')),
-            quantity=product.get('quantity'),
+    products = order.get('products')
+    if isinstance(products, list) and len(products):
+        order_obj = Order.objects.create(
+            datetime=order.get('datetime'),
+            firstname=order.get('firstname'),
+            lastname=order.get('lastname'),
+            phonenumber=order.get('phonenumber'),
+            address=order.get('address')
         )
-    return Response()
+        for product in products:
+            OrderItem.objects.create(
+                order=order_obj,
+                product=Product.objects.get(id=product.get('product')),
+                quantity=product.get('quantity'),
+            )
+        return Response()
+    else: 
+        return Response('error! products key not presented or not a list or list is empty',
+                         status=status.HTTP_400_BAD_REQUEST,
+                       )
