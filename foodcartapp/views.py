@@ -1,6 +1,7 @@
 import json
 from django.http import JsonResponse
 from django.templatetags.static import static
+from re import match
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -62,14 +63,35 @@ def product_list_api(request):
 @api_view(['POST'])
 def register_order(request):
     order = request.data
+    datetime = order.get('datetime')
+    firstname = order.get('firstname')
+    lastname = order.get('lastname')
+    phonenumber = order.get('phonenumber')
+    address = order.get('address')
     products = order.get('products')
-    if isinstance(products, list) and len(products):
+    if not (isinstance(firstname, str) and len(firstname)):
+        return Response('error! firstname key not presented or not is str or str is empty',
+                         status=status.HTTP_400_BAD_REQUEST,
+                       )
+    elif not (isinstance(lastname, str) and len(lastname)):
+        return Response('error! firstname key not presented or not is str or str is empty',
+                         status=status.HTTP_400_BAD_REQUEST,
+                       )
+    elif not (isinstance(products, list) and len(products)):
+        return Response('error! products key not presented or not is a list or list is empty',
+                         status=status.HTTP_400_BAD_REQUEST,
+                       )
+    elif not (isinstance(phonenumber, str) and match(r'^\+79?\d{9}$', phonenumber)):
+        return Response('error! Phone number not is str in format: \'+79231234567\'. Up to 11 digits allowed.',
+                         status=status.HTTP_400_BAD_REQUEST,
+                        )
+    else: 
         order_obj = Order.objects.create(
-            datetime=order.get('datetime'),
-            firstname=order.get('firstname'),
-            lastname=order.get('lastname'),
-            phonenumber=order.get('phonenumber'),
-            address=order.get('address')
+            datetime=datetime,
+            firstname=firstname,
+            lastname=lastname,
+            phonenumber=phonenumber,
+            address=address
         )
         for product in products:
             OrderItem.objects.create(
@@ -78,7 +100,3 @@ def register_order(request):
                 quantity=product.get('quantity'),
             )
         return Response()
-    else: 
-        return Response('error! products key not presented or not a list or list is empty',
-                         status=status.HTTP_400_BAD_REQUEST,
-                       )

@@ -134,14 +134,12 @@ class Order(models.Model):
     )
     firstname = models.CharField(
         'имя',
-        blank=True,
         null=False,
         max_length=50,
         db_index=True,
     )
     lastname = models.CharField(
         'фамилия',
-        blank=True,
         null=False, 
         max_length=50,
         db_index=True,
