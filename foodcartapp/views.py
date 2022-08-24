@@ -17,10 +17,10 @@ class OrderItemSerializer(ModelSerializer):
           
     
 class OrderSerializer(ModelSerializer):
-    products = OrderItemSerializer(many=True)
+    products = OrderItemSerializer(many=True, write_only=True)
     class Meta():
         model = Order
-        fields = ['firstname', 'lastname', 'phonenumber', 'address', 'products']
+        fields = ['id', 'firstname', 'lastname', 'phonenumber', 'address', 'products']
 
 
 def banners_list_api(request):
@@ -91,5 +91,5 @@ def register_order(request):
     )
     order_items = [OrderItem(order=order, **fields) for fields in products]
     OrderItem.objects.bulk_create(order_items)
-
-    return Response()
+    
+    return Response(OrderSerializer(order).data)
