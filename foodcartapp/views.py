@@ -1,13 +1,27 @@
 import json
 from django.http import JsonResponse
 from django.templatetags.static import static
-from re import match
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework.serializers import ModelSerializer
+from rest_framework.serializers import ValidationError
 
-from .models import Order, OrderItem
-from .models import Product
+from .models import Order, OrderItem, Product
+
+
+class OrderItemSerializer(ModelSerializer):
+    class Meta():
+        model = OrderItem
+        fields = ['product', 'quantity']
+          
+    
+class OrderSerializer(ModelSerializer):
+    products = OrderItemSerializer(many=True)
+    class Meta():
+        model = Order
+        fields = ['firstname', 'lastname', 'phonenumber', 'address', 'products']
+
 
 def banners_list_api(request):
     # FIXME move data to db?
@@ -62,41 +76,20 @@ def product_list_api(request):
 
 @api_view(['POST'])
 def register_order(request):
-    order = request.data
-    datetime = order.get('datetime')
-    firstname = order.get('firstname')
-    lastname = order.get('lastname')
-    phonenumber = order.get('phonenumber')
-    address = order.get('address')
-    products = order.get('products')
-    if not (isinstance(firstname, str) and len(firstname)):
-        return Response('error! firstname key not presented or not is str or str is empty',
-                         status=status.HTTP_400_BAD_REQUEST,
-                       )
-    elif not (isinstance(lastname, str) and len(lastname)):
-        return Response('error! firstname key not presented or not is str or str is empty',
-                         status=status.HTTP_400_BAD_REQUEST,
-                       )
-    elif not (isinstance(products, list) and len(products)):
-        return Response('error! products key not presented or not is a list or list is empty',
-                         status=status.HTTP_400_BAD_REQUEST,
-                       )
-    elif not (isinstance(phonenumber, str) and match(r'^\+79?\d{9}$', phonenumber)):
-        return Response('error! Phone number not is str in format: \'+79231234567\'. Up to 11 digits allowed.',
-                         status=status.HTTP_400_BAD_REQUEST,
-                        )
-    else: 
-        order_obj = Order.objects.create(
-            datetime=datetime,
-            firstname=firstname,
-            lastname=lastname,
-            phonenumber=phonenumber,
-            address=address
-        )
-        for product in products:
-            OrderItem.objects.create(
-                order=order_obj,
-                product=Product.objects.get(id=product.get('product')),
-                quantity=product.get('quantity'),
-            )
-        return Response()
+    serializer = OrderSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    
+    products = serializer.validated_data['products']
+    if not products:
+         raise ValidationError(['\'products\' key must not be empty'])
+         
+    order = Order.objects.create(
+        firstname=serializer.validated_data['firstname'],
+        lastname=serializer.validated_data['lastname'],
+        phonenumber=serializer.validated_data['phonenumber'],
+        address=serializer.validated_data['address']
+    )
+    order_items = [OrderItem(order=order, **fields) for fields in products]
+    OrderItem.objects.bulk_create(order_items)
+
+    return Response()
