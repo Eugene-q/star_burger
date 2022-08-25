@@ -1,8 +1,8 @@
 from django.db import models
+from django.db.models import F, Sum
 from django.core.validators import MinValueValidator
 
 from phonenumber_field.modelfields import PhoneNumberField
-#import datetime
 
 class Restaurant(models.Model):
     name = models.CharField(
@@ -37,6 +37,11 @@ class ProductQuerySet(models.QuerySet):
         )
         return self.filter(pk__in=products)
 
+class OrderQuerySet(models.QuerySet):
+    def price(self):
+        return Order.objects.annotate(price=Sum(F('order_items__product__price')
+                                 * F('order_items__quantity'))
+                                 )
 
 class ProductCategory(models.Model):
     name = models.CharField(
@@ -154,6 +159,8 @@ class Order(models.Model):
         db_index=True,
     )
     
+    objects = OrderQuerySet.as_manager()
+    
     class Meta:
         verbose_name = 'заказ'
         verbose_name_plural = 'заказы'
@@ -165,13 +172,13 @@ class Order(models.Model):
 class OrderItem(models.Model):
     order = models.ForeignKey(
         Order,
-        related_name='items',
+        related_name='order_items',
         verbose_name='заказ',
         on_delete=models.CASCADE,
     )
     product = models.ForeignKey(
         Product,
-        related_name='items',
+        related_name='order_items',
         verbose_name='продукт',
         on_delete=models.CASCADE,
     )    
