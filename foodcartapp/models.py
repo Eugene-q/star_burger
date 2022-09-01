@@ -178,6 +178,7 @@ class OrderItem(models.Model):
     )
     product = models.ForeignKey(
         Product,
+        default=1,
         related_name='order_items',
         verbose_name='продукт',
         on_delete=models.CASCADE,
