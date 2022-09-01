@@ -13,12 +13,13 @@ from .models import OrderItem
 
 class RestaurantMenuItemInline(admin.TabularInline):
     model = RestaurantMenuItem
-    fields = ('product', 'quantity')
+    fields = ('product', 'availability')
     extra = 0
 
 
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
+    fields = ('product', 'quantity', 'price')
     extra = 0
 
 
@@ -124,6 +125,7 @@ class OrderAdmin(admin.ModelAdmin):
         'phonenumber',
     ]
     list_display = [
+        'id',
         'datetime',
         'firstname',
         'address',
@@ -132,3 +134,8 @@ class OrderAdmin(admin.ModelAdmin):
     inlines = [
         OrderItemInline
     ]
+    def save_formset(self, request, form, formset, change):
+        instances = formset.save(commit=False)
+        for instance in instances:
+            instance.price = instance.product.price
+            instance.save()

@@ -13,7 +13,7 @@ from .models import Order, OrderItem, Product
 class OrderItemSerializer(ModelSerializer):
     class Meta():
         model = OrderItem
-        fields = ['product', 'quantity']
+        fields = ['product', 'quantity', 'price']
           
     
 class OrderSerializer(ModelSerializer):
@@ -82,14 +82,14 @@ def register_order(request):
     products = serializer.validated_data['products']
     if not products:
          raise ValidationError(['\'products\' key must not be empty'])
-         
     order = Order.objects.create(
         firstname=serializer.validated_data['firstname'],
         lastname=serializer.validated_data['lastname'],
         phonenumber=serializer.validated_data['phonenumber'],
         address=serializer.validated_data['address']
     )
-    order_items = [OrderItem(order=order, **fields) for fields in products]
+    order_items = [
+        OrderItem(order=order, **fields).set_price() for fields in products]                                 
     OrderItem.objects.bulk_create(order_items)
     
     return Response(OrderSerializer(order).data)

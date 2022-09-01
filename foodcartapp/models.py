@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import F, Sum
+from django.db.models import Q, F, Sum, Case, When
 from django.core.validators import MinValueValidator
 
 from phonenumber_field.modelfields import PhoneNumberField
@@ -37,11 +37,13 @@ class ProductQuerySet(models.QuerySet):
         )
         return self.filter(pk__in=products)
 
+
 class OrderQuerySet(models.QuerySet):
-    def price(self):
-        return Order.objects.annotate(price=Sum(F('order_items__product__price')
-                                 * F('order_items__quantity'))
-                                 )
+    def get_price(self):
+        return Order.objects.annotate(
+            price=Sum(F('order_items__price') * F('order_items__quantity'))
+            )
+        
 
 class ProductCategory(models.Model):
     name = models.CharField(
@@ -139,13 +141,11 @@ class Order(models.Model):
     )
     firstname = models.CharField(
         'имя',
-        null=False,
         max_length=50,
         db_index=True,
     )
     lastname = models.CharField(
-        'фамилия',
-        null=False, 
+        'фамилия', 
         max_length=50,
         db_index=True,
     )
@@ -181,7 +181,14 @@ class OrderItem(models.Model):
         related_name='order_items',
         verbose_name='продукт',
         on_delete=models.CASCADE,
-    )    
+    )
+    price = models.DecimalField(
+        blank=True,
+        decimal_places=2,
+        max_digits=6,
+        verbose_name='цена',
+        validators=[MinValueValidator(0)],
+    )   
     quantity = models.IntegerField(
         verbose_name='количество',
         default=1,
@@ -194,6 +201,10 @@ class OrderItem(models.Model):
         unique_together = [
             ['order', 'product']
         ]
+    
+    def set_price(self):
+        self.price = self.product.price
+        return self
 
     def __str__(self):
         return f"{self.order.address} - {self.product.name}"
